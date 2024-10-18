@@ -1,0 +1,33 @@
+{
+  "manifest_version": 3,
+  "name": "YouTube Video Transcripts Summary",
+  "version": "1.0",
+  "description": "A Chrome extension to summarize YouTube videos.",
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "du.ico",
+      "48": "du.ico",
+      "128": "du.ico"
+    },
+    "default_title": "YouTube Video Transcripts Summary"
+  },
+  "permissions": [
+    "storage",
+    "activeTab",
+    "tabs",
+    "contextMenus"
+  ],
+  "host_permissions": [
+    "http://localhost:*/",
+    "https://youtube-transcripts.p.rapidapi.com/*",
+    "https://api.openai.com/v1/chat/completions"
+  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'; connect-src 'self' http://localhost:* https://youtube-transcripts.p.rapidapi.com https://api.openai.com/v1/chat/completions"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "options_page": "options.html"
+}
