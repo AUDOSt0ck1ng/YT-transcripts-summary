@@ -40,59 +40,11 @@ document.addEventListener('DOMContentLoaded', function() {
           if (chrome.runtime.lastError) {
             reject(new Error(chrome.runtime.lastError.message));
           } else {
-            resolve(result.api_port || '59999');
+            resolve(result.api_port || '3000');
           }
         });
       });
     }
-
-// 從本地 API 獲取 RapidAPI 金鑰
-async function getRapidAPIKey() {
-  try {
-    const port = await getApiPort();
-    const response = await fetch(`http://localhost:${port}/get-x-rapidapi-key`);
-    const data = await response.text();
-    return data.replace(/^"|"$/g, '');
-  } catch (error) {
-    console.error('獲取 RapidAPI 金鑰時出錯');
-  }
-}
-
-  // 從本地 API 獲取 RapidAPI 主機
-  async function getRapidAPIHost() {
-    try {
-      const port = await getApiPort();
-      const response = await fetch(`http://localhost:${port}/get-x-rapidapi-host`);
-      const data = await response.text();
-      return data.replace(/^"|"$/g, '');
-    } catch (error) {
-      console.error('獲取 RapidAPI 主機時出錯');
-    }
-  }
-
-  // 從本地 API 獲取 OpenAI API 金鑰
-  async function getOpenAIApiKey() {
-    try {
-      const port = await getApiPort();
-      const response = await fetch(`http://localhost:${port}/get-openai-api-key`);
-      const data = await response.text();
-      return data.replace(/^"|"$/g, '');
-    } catch (error) {
-      console.error('獲取 OpenAI API 金鑰時出錯');
-    }
-  }
-
-  // 獲取LLM_model
-  async function getLLMModel() {
-    try {
-      const port = await getApiPort();
-      const response = await fetch(`http://localhost:${port}/get-llm-model`);
-      const data = await response.text();
-      return data.replace(/^"|"$/g, '');
-    } catch (error) {
-      console.error('獲取 LLM 模型時出錯');
-    }
-  }
 
   async function getSubtitles(videoUrl) {
     transcriptsDiv.style.display = 'block';
@@ -108,23 +60,11 @@ async function getRapidAPIKey() {
     }
 
     try {
-
-      // 獲取 RapidAPI 主機和金鑰
-      const rapidApiHost = await getRapidAPIHost();
-      const rapidApiKey = await getRapidAPIKey();
-      const openaiApiKey = await getOpenAIApiKey();
-      const port = await getApiPort();
-  
-      console.log('port:', port);
-      console.log('RapidAPI Host:', rapidApiHost);
-      console.log('RapidAPI Key:', rapidApiKey ? '已獲取' : '未獲取');
-      console.log('OpenAI API Key:', openaiApiKey ? '已獲取' : '未獲取');
-  
       const options = {
         method: 'GET',
         headers: {
-          'x-rapidapi-host': rapidApiHost,
-          'x-rapidapi-key': rapidApiKey
+          'x-rapidapi-host': 'youtube-transcripts.p.rapidapi.com',
+          'x-rapidapi-key': '76d2366dadmshc0c498eb5a723abp1d5754jsnd4c1a2ccfb6b'
         }
       };
 
@@ -138,7 +78,8 @@ async function getRapidAPIKey() {
           const minutes = Math.floor(item.offset / 60);
           const seconds = Math.floor(item.offset % 60);
           const timeStamp = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-          return `[${timeStamp}] ${item.text}`;
+          return `[${timeStamp}] ${item.text}`; // 移除超連結，僅顯示字幕文本
+          // return `<a href="#" style="color: white; text-decoration: none;" onclick="updateTime('${item.offset}'); return false;">[${timeStamp}] ${item.text}</a>`; // 將時間戳記變成超連結，並在當前視窗中更新時間軸
         }).join('\n');
 
         const language = data.lang || '未知';
@@ -161,20 +102,26 @@ async function getRapidAPIKey() {
       transcriptsDiv.innerText = '獲取字幕時出錯：' + error.message;
     }
   }
+
+  // 新增這個函數來更新原始視窗的時間軸
+  function updateTime(offset) {
+    if (window.opener) {
+      const videoId = new URL(window.opener.location.href).searchParams.get('v');
+      const timeLink = `https://www.youtube.com/watch?v=${videoId}&t=${offset}`; // 生成新的時間鏈接
+      window.opener.location.href = timeLink; // 更新原始視窗的 URL
+    }
+  }
+
   async function getSummary() {
     const subtitlesContainer = document.querySelector('.subtitles-container pre');
     const subtitles = subtitlesContainer ? subtitlesContainer.textContent : '';
-    
     try {
-      const openaiApiKey = await getOpenAIApiKey();
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      const response = await fetch('http://localhost:3000/api/chat', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${openaiApiKey}`
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          model: await getLLMModel(),
           messages: [
             {role: "system", content: "你是一個專業的影片摘要助手。請根據提供的字幕內容，生成一個簡潔的摘要。"},
             {role: "user", content: `請為以下字幕內容生成摘要：\n\n${subtitles}`}
@@ -183,7 +130,7 @@ async function getRapidAPIKey() {
       });
 
       const data = await response.json();
-      const summary = data.choices[0].message.content;
+      const summary = data.reply;
 
       transcriptsDiv.innerHTML = `
         <div class="summary-content">
@@ -213,4 +160,3 @@ async function getRapidAPIKey() {
     chrome.runtime.openOptionsPage();
   }
 });
-

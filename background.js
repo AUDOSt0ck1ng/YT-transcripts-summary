@@ -1,7 +1,7 @@
 chrome.runtime.onInstalled.addListener(() => {
   // 初始化配置
   chrome.storage.local.set({
-    api_port: '59999'
+    api_port: '3000'
 
   }, function() {
     console.log('API 配置已初始化');
